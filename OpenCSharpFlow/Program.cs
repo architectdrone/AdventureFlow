@@ -58,6 +58,10 @@ namespace combat
         public static int numberOfStats = 10; //How many stats will be present.
         public bool allowNegativeStats = false; //Whether negative stats are allowed. Effects get() and operators. If false, negative numbers go to 0.
 
+        //Optional values. These have no effect on the operation of the StatBlock. They only store contextual information.
+        public string? name;
+        public CombatAgent? user;
+
         private int[] numberOfDice; //Holds how many dice, if any, will be rolled.
         private int[] numberOfDiceSides; //Holds how many sides each dice has - if any.
         private int[] offset; //Holds constant offsets.
@@ -186,7 +190,12 @@ namespace combat
     {
         public int id;
         public bool dead = false;
-        public int HP = 30;
+
+        //NOTE: Do I really want this?
+        public int HP = 30; //This is only declared here for conveinence. A negative or zero value will not on it's own kill the CombatAgent. 
+
+        //Optional values that have no impact on performance.
+        public string? name;
 
         public abstract StatBlock getDefense(StatBlock attack);
         public abstract (List<CombatAgent>, StatBlock) getAttack(CombatHandler handler); //Should return a list of targets of the attack.
