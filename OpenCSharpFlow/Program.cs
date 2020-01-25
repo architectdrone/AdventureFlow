@@ -415,13 +415,13 @@ namespace cli
      * Tools for creating a CLI (Command Line Interface) for your games.
      */
 
-    class StatBlockUtilities
+    class Utilities
     {
         /*
-         * Utilities for displaying information about StatBlocks.
+         * Utilities for displaying information.
          */
 
-        static public string valueRepresentation(combat.StatBlock statBlock, int index)
+        static public string statBlockValueRepresentation(combat.StatBlock statBlock, int index)
         {
             int offset = statBlock.getOffset(index);
             int numberOfDice = statBlock.getNumberOfDice(index);
@@ -434,6 +434,11 @@ namespace cli
             int numberOfDiceSides = statBlock.getNumberOfDice(index);
 
             return $"{numberOfDice}d{numberOfDiceSides}+{offset}";
+        }
+        
+        static public string santitizeName(combat.CombatAgent agent)
+        {
+            return agent.name ?? $"Fighter #{agent.id}"
         }
     }
 
@@ -488,5 +493,75 @@ namespace cli
         public abstract void damage(combat.CombatAgent defender, combat.StatBlock damage); //Called when defender is damaged.
         public abstract void death(combat.CombatAgent defender); //Called when defender has died :(
         public abstract void battleEnd(); //Called at the end of combat.
+    }
+
+    namespace implementations
+    {
+        class DefaultCombatDisplay : CombatDisplay
+        {
+            /*
+             * A default for when you just want to get started.
+             */
+
+            public override void battleStart()
+            {
+                print("Let the games begin!");
+            }
+
+            public override void turnStart(combat.CombatAgent agent)
+            {
+                print($"{Utilities.santitizeName(agent)}'s Turn.");
+            }
+
+            public override void attack(combat.CombatAgent attacker, combat.StatBlock attack, List<combat.CombatAgent> targets)
+            {
+                string targetString = "";
+                if (targets.Count == 1)
+                {
+                    targetString = Utilities.santitizeName(targets[0]);
+                }
+                else
+                {
+                    for (int i = 0; i < targets.Count; i++)
+                    {
+                        string next = "";
+                        if (i == targets.Count - 2)
+                        {
+                            next = ", and ";
+                        }
+                        else
+                        {
+                            next = ", ";
+                        }
+
+                        next+=Utilities.santitizeName(targets[i]);
+                        targetString += next;
+                    }
+                }
+
+                print($"{Utilities.santitizeName(attacker)} uses {attack.name ?? "Attack"} against {targetString}");
+
+            }
+
+            public override void defend(combat.CombatAgent defender, combat.StatBlock defense, combat.StatBlock attack)
+            {
+                print($"{Utilities.santitizeName(defender)} defends against {attack.name ?? "Attack"} with {defense.name ?? "Defense"}");
+            }
+
+            public override void damage(combat.CombatAgent defender, combat.StatBlock damage)
+            {
+                print($"{Utilities.santitizeName(defender)} takes {damage.accumulate()} points of damage.");
+            }
+
+            public override void death(combat.CombatAgent defender)
+            {
+                print($"{Utilities.santitizeName(defender)} has perished");
+            }
+
+            public override void battleEnd()
+            {
+                print("It's all over.");
+            }
+        }
     }
 }
