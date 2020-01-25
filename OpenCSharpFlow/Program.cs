@@ -12,13 +12,17 @@ namespace OpenCSharpFlow
             VikingWizard fighter1 = new VikingWizard();
             VikingWizard fighter2 = new VikingWizard();
 
+            fighter1.name = "Jim";
+            fighter2.name = "Bill";
+
             var battle = new combat.implementation.handler.BattleRoyale();
+            battle.display = new cli.implementations.DefaultCombatDisplay();
             battle.add(fighter1);
             battle.add(fighter2);
 
             while (!battle.fightOver)
             {
-                Console.WriteLine("The Battle Rages On...");
+                //Console.WriteLine("The Battle Rages On...");
                 battle.next();
             }
         }
@@ -30,18 +34,22 @@ namespace OpenCSharpFlow
                 //ATTACKS
                 combat.StatBlock firebolt = new combat.StatBlock();
                 firebolt.set(1, 10);
+                firebolt.name = "Firebolt";
                 addAttack(firebolt);
                 combat.StatBlock hellsaber = new combat.StatBlock();
                 hellsaber.set(0, 2, 3, 3);
+                hellsaber.name = "Hellsaber";
                 addAttack(hellsaber);
 
-                //ATTACKS
+                //DEFENSES
                 combat.StatBlock divine_benediction = new combat.StatBlock();
-                firebolt.set(1, 2, 5, 0);
+                divine_benediction.set(1, 2, 5, 0);
+                divine_benediction.name = "Divine Benediction";
                 addDefense(divine_benediction);
                 combat.StatBlock shield_wall = new combat.StatBlock();
                 shield_wall.set(0, 8);
-                addDefense(hellsaber);
+                shield_wall.name = "Shield Wall";
+                addDefense(shield_wall);
             }
         }
     }
@@ -212,16 +220,15 @@ namespace combat
     {
         public List<CombatAgent> fighters;
         public bool fightOver = false;
+        public cli.CombatDisplay? display;
 
-        private cli.CombatDisplay? display;
         private int currentFighter; //Index of current fighter in fighter queue.
         private bool fightHasBegun = false;
 
-        public CombatHandler(cli.CombatDisplay? _display)
+        public CombatHandler()
         {
             fighters = new List<CombatAgent>();
             currentFighter = 0;
-            display = _display;
         }
 
         public void next()
@@ -333,8 +340,6 @@ namespace combat
                 {
                     Random rnd = new Random();
 
-                    Console.WriteLine(String.Format("It's {0}'s turn to attack!", id));
-
                     //Random Attack
                     int attack_index = rnd.Next(attacks.Count);
                     StatBlock attack = attacks[attack_index];
@@ -346,7 +351,6 @@ namespace combat
                     List<CombatAgent> defenders = new List<CombatAgent>();
                     defenders.Add(defender);
 
-                    Console.WriteLine(String.Format("{0} uses {1} against {2}", id, attack_index, defender.id));
                     return (defenders, attack);
                 }
 
@@ -356,18 +360,14 @@ namespace combat
 
                     //Random Defense
                     int defense_index = rnd.Next(defenses.Count);
-                    StatBlock defense = attacks[defense_index];
-
-                    Console.WriteLine(String.Format("{0} defends with {1}", id, defense_index));
+                    StatBlock defense = defenses[defense_index];
 
                     return defense;
                 }
 
                 public override void takeDamage(StatBlock damage)
-                {
-                    
+                { 
                     HP -= damage.accumulate();
-                    Console.WriteLine(String.Format("{0} takes {1} points of damage, leaving him with {2} HP", id, damage.accumulate(), HP));
                     if (HP < 0)
                     {
                         dead = true;
@@ -386,8 +386,6 @@ namespace combat
 
                 public override void agentDead(CombatAgent agent)
                 {
-                    Console.WriteLine(String.Format("{0} has perished!", agent.id));
-
                     //Remove the dead.
                     int deadFighterIndex = 0;
                     for (int i = 0; i < fighters.Count; i++)
@@ -438,7 +436,7 @@ namespace cli
         
         static public string santitizeName(combat.CombatAgent agent)
         {
-            return agent.name ?? $"Fighter #{agent.id}"
+            return agent.name ?? $"Fighter #{agent.id}";
         }
     }
 
