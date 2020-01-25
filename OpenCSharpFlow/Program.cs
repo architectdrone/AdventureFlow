@@ -212,12 +212,16 @@ namespace combat
     {
         public List<CombatAgent> fighters;
         public bool fightOver = false;
-        private int currentFighter; //Index of current fighter in fighter queue.
 
-        public CombatHandler()
+        private cli.CombatDisplay? display;
+        private int currentFighter; //Index of current fighter in fighter queue.
+        private bool fightHasBegun = false;
+
+        public CombatHandler(cli.CombatDisplay? _display)
         {
             fighters = new List<CombatAgent>();
             currentFighter = 0;
+            display = _display;
         }
 
         public void next()
@@ -225,24 +229,50 @@ namespace combat
             /*
              * Allows the next combatant to attack.
              */
+            if (!fightHasBegun)
+            {
+                fightHasBegun = true;
+                if (!(display is null))
+                {
+                    display.battleStart();
+                }
+            }
+
             currentFighter += 1;
             if (currentFighter > fighters.Count-1)
             {
                 currentFighter = 0;
             }
 
-            (List<CombatAgent>, StatBlock) action = fighters[currentFighter].getAttack(this);
+            CombatAgent fighter = fighters[currentFighter];
+            (List<CombatAgent>, StatBlock) action = fighter.getAttack(this);
             List<CombatAgent> attacked_agents = action.Item1;
             StatBlock attack = action.Item2;
+
+            if (!(display is null))
+            {
+                display.turnStart(fighter);
+                display.attack(fighter, attack, attacked_agents);
+            }
 
             foreach (CombatAgent agent in attacked_agents)
             {
                 StatBlock defense = agent.getDefense(attack);
                 StatBlock damage = attack - defense;
+                
+                if (!(display is null))
+                {
+                    display.defend(agent, defense, attack);
+                    display.damage(agent, damage);
+                }
                 agent.takeDamage(damage);
 
                 if (agent.dead)
                 {
+                    if (!(display is null))
+                    {
+                        display.death(agent);
+                    }
                     agentDead(agent);
                 }
             }
@@ -261,6 +291,7 @@ namespace combat
 
     /*
      * Various implementations of the abstract classes.
+     * These could be considered actual objects to use in a game, or merely examples of possible usage.
      */
     namespace implementation
     {
@@ -375,5 +406,87 @@ namespace combat
                 }
             }
         }
+    }
+}
+
+namespace cli
+{
+    /*
+     * Tools for creating a CLI (Command Line Interface) for your games.
+     */
+
+    class StatBlockUtilities
+    {
+        /*
+         * Utilities for displaying information about StatBlocks.
+         */
+
+        static public string valueRepresentation(combat.StatBlock statBlock, int index)
+        {
+            int offset = statBlock.getOffset(index);
+            int numberOfDice = statBlock.getNumberOfDice(index);
+
+            if (numberOfDice == 0)
+            {
+                return $"{offset}";
+            }
+
+            int numberOfDiceSides = statBlock.getNumberOfDice(index);
+
+            return $"{numberOfDice}d{numberOfDiceSides}+{offset}";
+        }
+    }
+
+    abstract class InformationDisplay
+    {
+        /*
+         * A base class for all classes needing to output some information in a string basis. 
+         * 
+         */
+        public bool writeToConsole = true; //If true, immediately do a Console.WriteLine() of new messages. Otherwise, store to a buffer. Storing to a buffer might be useful if you want to migrate to a GUI.
+        private Queue<string> messageBuffer; //If writeToConsole is false, messages will be stored here. 
+        public string? prefix; //An optional value for prepending a prefix to a message.
+
+        public void print(string toPrint)
+        {
+            /*
+             * Handle a new string.
+             */
+
+            string message;
+            if (prefix is string)
+            {
+                message = $"[{prefix}] {toPrint}";
+            }
+            else
+            {
+                message = toPrint;
+            }
+
+            if (writeToConsole)
+            {
+                Console.WriteLine(message);
+            }
+            else
+            {
+                messageBuffer.Enqueue(message);
+            }
+        }
+    
+        public string nextMessage()
+        {
+            return messageBuffer.Dequeue();
+        }
+    }
+
+    abstract class CombatDisplay : InformationDisplay
+    {
+        public abstract void battleStart(); //Called at the beginning of the battle.
+        public abstract void turnStart(combat.CombatAgent agent); //Called at the beginning of agent's turn.
+        public abstract void attack(combat.CombatAgent attacker, combat.StatBlock attack, List<combat.CombatAgent> targets); //Called when attacker uses attack against targets.
+        public abstract void defend(combat.CombatAgent defender, combat.StatBlock defense, combat.StatBlock attack); //Called when defender uses defense against attack.
+        public abstract void damage(combat.CombatAgent defender, combat.StatBlock damage); //Called when defender is damaged.
+        public abstract void death(combat.CombatAgent defender); //Called when defender has died :(
+        public abstract void battleEnd(); //Called at the end of combat.
     }
 }
